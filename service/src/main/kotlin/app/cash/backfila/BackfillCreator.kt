@@ -6,6 +6,7 @@ import app.cash.backfila.protos.clientservice.PrepareBackfillRequest
 import app.cash.backfila.protos.clientservice.PrepareBackfillResponse
 import app.cash.backfila.protos.service.CreateBackfillRequest
 import app.cash.backfila.service.persistence.BackfilaDb
+import app.cash.backfila.service.persistence.BackfillPartitionState
 import app.cash.backfila.service.persistence.BackfillState
 import app.cash.backfila.service.persistence.DbBackfillRun
 import app.cash.backfila.service.persistence.DbRegisteredBackfill
@@ -84,12 +85,13 @@ class BackfillCreator @Inject constructor(
       )
       session.save(backfillRun)
 
+      check(backfillRun.state == BackfillState.PAUSED)
       for (partition in partitions) {
         val dbRunPartition = DbRunPartition(
           backfillRun.id,
           partition.partition_name,
           partition.backfill_range ?: KeyRange.Builder().build(),
-          backfillRun.state,
+          BackfillPartitionState.PAUSED,
           partition.estimated_record_count
         )
         session.save(dbRunPartition)

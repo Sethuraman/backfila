@@ -5,6 +5,7 @@ import app.cash.backfila.protos.clientservice.KeyRange
 import app.cash.backfila.protos.clientservice.PrepareBackfillRequest
 import app.cash.backfila.protos.clientservice.PrepareBackfillResponse
 import app.cash.backfila.service.persistence.BackfilaDb
+import app.cash.backfila.service.persistence.BackfillPartitionState
 import app.cash.backfila.service.persistence.BackfillState
 import app.cash.backfila.service.persistence.DbBackfillRun
 import app.cash.backfila.service.persistence.DbRegisteredBackfill
@@ -138,13 +139,14 @@ class CloneBackfillAction @Inject constructor(
       )
       session.save(backfillRun)
 
+      check(backfillRun.state == BackfillState.PAUSED)
       if (request.range_clone_type == RangeCloneType.NEW) {
         for (partition in partitions) {
           val dbRunPartition = DbRunPartition(
             backfillRun.id,
             partition.partition_name,
             partition.backfill_range ?: KeyRange.Builder().build(),
-            backfillRun.state,
+            BackfillPartitionState.PAUSED,
             partition.estimated_record_count
           )
           session.save(dbRunPartition)
@@ -161,12 +163,13 @@ class CloneBackfillAction @Inject constructor(
           )
         }
 
+        check(backfillRun.state == BackfillState.PAUSED)
         for (sourcePartition in sourcePartitions) {
           val dbRunPartition = DbRunPartition(
             backfillRun.id,
             sourcePartition.partition_name,
             sourcePartition.backfillRange(),
-            backfillRun.state,
+            BackfillPartitionState.PAUSED,
             sourcePartition.estimated_record_count
           )
           // Copy the cursor if continuing, otherwise just leave blank to start from beginning.

@@ -20,6 +20,7 @@ import app.cash.backfila.protos.service.ConfigureServiceRequest
 import app.cash.backfila.protos.service.CreateBackfillRequest
 import app.cash.backfila.protos.service.Parameter
 import app.cash.backfila.service.persistence.BackfilaDb
+import app.cash.backfila.service.persistence.BackfillPartitionState
 import app.cash.backfila.service.persistence.BackfillState
 import app.cash.backfila.service.runner.BackfillRunner
 import app.cash.backfila.service.scheduler.LeaseHunter
@@ -68,7 +69,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isNull()
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
 
     runner.run()
@@ -76,7 +77,7 @@ class BackfillRunnerTest {
     var status = getBackfillStatusAction.status(runner.backfillRunId.id)
     var partition = status.partitions.find { it.id == runner.partitionId.id }!!
     assertThat(partition.pkey_cursor).isEqualTo("1000")
-    assertThat(partition.state).isEqualTo(BackfillState.COMPLETE)
+    assertThat(partition.state).isEqualTo(BackfillPartitionState.COMPLETE)
     // Not all partitions complete.
     assertThat(status.state).isEqualTo(BackfillState.RUNNING)
 
@@ -84,7 +85,7 @@ class BackfillRunnerTest {
 
     partition = status.partitions.find { it.id == runner.partitionId.id }!!
     assertThat(partition.pkey_cursor).isNull()
-    assertThat(partition.state).isEqualTo(BackfillState.RUNNING)
+    assertThat(partition.state).isEqualTo(BackfillPartitionState.RUNNING)
 
     runner.run()
 
@@ -92,7 +93,7 @@ class BackfillRunnerTest {
     // All partitions complete.
     assertThat(status.state).isEqualTo(BackfillState.COMPLETE)
     partition = status.partitions.find { it.id == runner.partitionId.id }!!
-    assertThat(partition.state).isEqualTo(BackfillState.COMPLETE)
+    assertThat(partition.state).isEqualTo(BackfillPartitionState.COMPLETE)
     assertThat(partition.pkey_cursor).isEqualTo("1000")
     assertThat(partition.precomputing_pkey_cursor).isEqualTo("1000")
     assertThat(partition.precomputing_done).isEqualTo(true)
@@ -200,7 +201,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isEqualTo("99".encodeUtf8())
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
   }
 
@@ -242,7 +243,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isEqualTo("99".encodeUtf8())
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
   }
 
@@ -316,7 +317,7 @@ class BackfillRunnerTest {
         transacter.transaction { session ->
           val partition = session.load(runner.partitionId)
           assertThat(partition.pkey_cursor).isEqualTo("99".encodeUtf8())
-          assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+          assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
         }
 
         // After the RunBatch completed, a getNextBatch request is buffered.
@@ -362,7 +363,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isNull()
-      assertThat(partition.run_state).isEqualTo(BackfillState.PAUSED)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.PAUSED)
     }
   }
 
@@ -397,7 +398,7 @@ class BackfillRunnerTest {
         transacter.transaction { session ->
           val partition = session.load(runner.partitionId)
           assertThat(partition.pkey_cursor).isNull()
-          assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+          assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
         }
 
         fakeBackfilaClientServiceClient.runBatchResponses.send(
@@ -411,7 +412,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isEqualTo("199".encodeUtf8())
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
   }
 
@@ -450,7 +451,7 @@ class BackfillRunnerTest {
     val partition = status.partitions.find { it.id == runner.partitionId.id }!!
     // Cursor not updated, backfill paused
     assertThat(partition.pkey_cursor).isNull()
-    assertThat(partition.state).isEqualTo(BackfillState.PAUSED)
+    assertThat(partition.state).isEqualTo(BackfillPartitionState.PAUSED)
 
     assertThat(status.event_logs[0].message).isEqualTo(
       "error running batch [0, 99], RPC error after 0ms. paused backfill due to 2 consecutive errors"
@@ -494,7 +495,7 @@ class BackfillRunnerTest {
         transacter.transaction { session ->
           val partition = session.load(runner.partitionId)
           assertThat(partition.pkey_cursor).isNull()
-          assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+          assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
         }
 
         fakeBackfilaClientServiceClient.runBatchResponses.send(
@@ -508,7 +509,7 @@ class BackfillRunnerTest {
     val partition = status.partitions.find { it.id == runner.partitionId.id }!!
     // Cursor updated
     assertThat(partition.pkey_cursor).isEqualTo("199")
-    assertThat(partition.state).isEqualTo(BackfillState.RUNNING)
+    assertThat(partition.state).isEqualTo(BackfillPartitionState.RUNNING)
 
     assertThat(status.event_logs[0].message).isEqualTo(
       "error running batch [0, 99], client exception after 0ms. backing off for 1000ms"
@@ -549,7 +550,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isEqualTo("99".encodeUtf8())
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
   }
 
@@ -588,7 +589,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isEqualTo("199".encodeUtf8())
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
   }
 
@@ -624,7 +625,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isEqualTo("199".encodeUtf8())
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
   }
 
@@ -682,7 +683,7 @@ class BackfillRunnerTest {
     transacter.transaction { session ->
       val partition = session.load(runner.partitionId)
       assertThat(partition.pkey_cursor).isEqualTo("199".encodeUtf8())
-      assertThat(partition.run_state).isEqualTo(BackfillState.RUNNING)
+      assertThat(partition.run_state).isEqualTo(BackfillPartitionState.RUNNING)
     }
   }
 

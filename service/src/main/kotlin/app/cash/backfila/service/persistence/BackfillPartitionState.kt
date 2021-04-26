@@ -1,8 +1,9 @@
 package app.cash.backfila.service.persistence
 
-enum class BackfillState {
+enum class BackfillPartitionState {
   PAUSED,
   RUNNING,
+  STALE,
   CANCELLED,
   COMPLETE
 }

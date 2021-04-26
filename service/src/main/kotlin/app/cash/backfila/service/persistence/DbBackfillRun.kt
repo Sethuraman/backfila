@@ -130,18 +130,20 @@ class DbBackfillRun() : DbUnsharded<DbBackfillRun>, DbTimestampedEntity {
       .list(session)
 
   fun setState(session: Session, queryFactory: Query.Factory, state: BackfillState) {
-    // State can't be changed after being completed.
+    // State can't be changed after being completed or cancelled.
     checkState(this.state != BackfillState.COMPLETE)
+    checkState(this.state != BackfillState.CANCELLED)
     this.state = state
     // Set the state of all the partitions that are not complete
     val query = session.hibernateSession.createQuery(
       "update DbRunPartition " +
         "set run_state = :newState, version = version + 1 " +
-        "where backfill_run_id = :runId and run_state <> :completed"
+        "where backfill_run_id = :runId and run_state in ( :running , :paused )"
     )
     query.setParameter("runId", id)
-    query.setParameter("newState", state)
-    query.setParameter("completed", BackfillState.COMPLETE)
+    query.setParameter("newState", state) // I guess there should be some kind of mapping here Valerio
+    query.setParameter("running", BackfillPartitionState.RUNNING)
+    query.setParameter("paused", BackfillPartitionState.PAUSED)
     query.executeUpdate()
   }
 
